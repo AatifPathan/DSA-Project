@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_SIZE 5  // Define the maximum size of the queue
+#define MAX_SIZE 3  
+#define MAX_ORDER_DETAILS 100
 
 typedef struct {
     int orderID;
     char customerName[30];
-    char orderDetails[100];
+    char orderDetails[MAX_ORDER_DETAILS];
 } Order;
 
 typedef struct {
@@ -16,70 +17,57 @@ typedef struct {
     int rear;
 } CircularQueue;
 
-// Initialize the circular queue
 void initializeQueue(CircularQueue* cq) {
     cq->front = -1;
     cq->rear = -1;
 }
 
-// Check if the queue is empty
 int isEmpty(CircularQueue* cq) {
     return (cq->front == -1);
 }
 
-// Check if the queue is full
 int isFull(CircularQueue* cq) {
     return ((cq->rear + 1) % MAX_SIZE == cq->front);
 }
 
-// Add a new order to the queue
 void enqueue(CircularQueue* cq, int orderID, char* customerName, char* orderDetails) {
     if (isFull(cq)) {
         printf("Queue is full! Cannot add more orders.\n");
         return;
     }
-
     if (isEmpty(cq)) {
         cq->front = cq->rear = 0;
     } else {
         cq->rear = (cq->rear + 1) % MAX_SIZE;
     }
-
     cq->queue[cq->rear].orderID = orderID;
     strcpy(cq->queue[cq->rear].customerName, customerName);
     strcpy(cq->queue[cq->rear].orderDetails, orderDetails);
-    printf("Order added: %d, Customer: %s\n", orderID, customerName);
+    printf("Order added: %d, Customer: %s, Items: %s\n", orderID, customerName, orderDetails);
 }
 
-// Remove the oldest order from the queue
 void dequeue(CircularQueue* cq) {
     if (isEmpty(cq)) {
         printf("Queue is empty! No orders to serve.\n");
         return;
     }
-
-    printf("Serving order: %d, Customer: %s\n", cq->queue[cq->front].orderID, cq->queue[cq->front].customerName);
-
-    if (cq->front == cq->rear) {  // Only one element in the queue
+    printf("Serving order: %d, Customer: %s, Items: %s\n", cq->queue[cq->front].orderID, cq->queue[cq->front].customerName, cq->queue[cq->front].orderDetails);
+    if (cq->front == cq->rear) {  
         cq->front = cq->rear = -1;
     } else {
         cq->front = (cq->front + 1) % MAX_SIZE;
     }
 }
 
-// Display all orders in the queue
 void displayOrders(CircularQueue* cq) {
     if (isEmpty(cq)) {
         printf("No orders in the queue.\n");
         return;
     }
-
     printf("Orders in the queue:\n");
     int i = cq->front;
     while (1) {
-        printf("Order ID: %d, Customer: %s, Details: %s\n",
-               cq->queue[i].orderID, cq->queue[i].customerName, cq->queue[i].orderDetails);
-
+        printf("Order ID: %d, Customer: %s, Items: %s\n", cq->queue[i].orderID, cq->queue[i].customerName, cq->queue[i].orderDetails);
         if (i == cq->rear) break;
         i = (i + 1) % MAX_SIZE;
     }
@@ -90,21 +78,61 @@ int main() {
     initializeQueue(&cq);
     int choice, orderID;
     char customerName[30];
-    char orderDetails[100];
+    char orderDetails[MAX_ORDER_DETAILS];
+    const char* menuItems[] = {"Cake", "Coffee", "Tea", "Soft Drink"};
+    int menuSize = 4;
 
     while (1) {
-        printf("\n1. Add Order\n2. Serve Order\n3. Display Orders\n4. Exit\n");
-        printf("Enter your choice: ");
-        scanf("%d", &choice);
+        printf("\n1. Add Order\n2. Serve Order\n3. Display Orders\n4. Exit\nEnter your choice: ");
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+        getchar();
 
         switch (choice) {
             case 1:
+                if (isFull(&cq)) {
+                    printf("Queue is full! Cannot add more orders.\n");
+                    break;
+                }
                 printf("Enter Order ID: ");
-                scanf("%d", &orderID);
+                if (scanf("%d", &orderID) != 1) {
+                    printf("Invalid input for Order ID.\n");
+                    while (getchar() != '\n');
+                    continue;
+                }
+                getchar();
                 printf("Enter Customer Name: ");
-                scanf(" %[^\n]", customerName);  // Read string with spaces
-                printf("Enter Order Details: ");
-                scanf(" %[^\n]", orderDetails);   // Read string with spaces
+                fgets(customerName, sizeof(customerName), stdin);
+                customerName[strcspn(customerName, "\n")] = '\0';
+                orderDetails[0] = '\0';
+                printf("Available Menu Items:\n");
+                for (int i = 0; i < menuSize; i++) {
+                    printf("%d. %s\n", i + 1, menuItems[i]);
+                }
+                printf("Select multiple items by entering their numbers separated by spaces, then press Enter.\n");
+                char itemInput[100];
+                getchar();
+                fgets(itemInput, sizeof(itemInput), stdin);
+                itemInput[strcspn(itemInput, "\n")] = '\0';
+                char *token = strtok(itemInput, " ");
+                while (token != NULL) {
+                    int item = atoi(token);
+                    if (item >= 1 && item <= menuSize) {
+                        if (strlen(orderDetails) > 0) {
+                            strcat(orderDetails, ", ");
+                        }
+                        strcat(orderDetails, menuItems[item - 1]);
+                    } else {
+                        printf("Invalid choice %d ignored.\n", item);
+                    }
+                    token = strtok(NULL, " ");
+                }
+                if (strlen(orderDetails) == 0) {
+                    strcpy(orderDetails, "No items selected");
+                }
                 enqueue(&cq, orderID, customerName, orderDetails);
                 break;
             case 2:
@@ -120,6 +148,5 @@ int main() {
                 printf("Invalid choice. Please try again.\n");
         }
     }
-
     return 0;
 }
